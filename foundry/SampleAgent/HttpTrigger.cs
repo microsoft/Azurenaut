@@ -27,16 +27,59 @@ namespace SampleAgent
 
             // parse http request with content type application/json with T<AgentThread>
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            AgentThread agentThread = JsonSerializer.Deserialize<AgentThread>(requestBody);
-            
-            /*
-            re-working the code to use the AgentService to get or create an agent and thread
-            */
+            AgentThread requestAgentThread = JsonSerializer.Deserialize<AgentThread>(requestBody);
 
-            Console.WriteLine(requestBody);
+            // Get or create an Agent if the AgentId is valid, else a new agent is created and AngentId and ThreadId are returned
+            var configureAssistant = await ConfigureAssistantEnvironment(requestAgentThread.AgentId, requestAgentThread.ThreadId);
 
+            return new OkObjectResult
+            (
+                new ClientResponse
+                {
+                    Response = configureAssistant.Response,
+                    AgentThread = configureAssistant.AgentThread
+                }
+            );
+        }
 
-            return new OkObjectResult("Func Agent ID: " + ser.AgentThread.AgentId + " Thread ID: " + ver.AgentThread.ThreadId);
+        private async Task<ClientResponse> ConfigureAssistantEnvironment(string agentId, string threadId)
+        {
+            _logger.LogInformation("Starting Agent configuration.");
+
+            var agentFoundryResponse = await _agentService.GetOrCreateAgentAsync(agentId);
+            if (string.IsNullOrEmpty(agentFoundryResponse.AgentThread.AgentId))
+            {
+                _logger.LogError("Failed to create or retrieve agent.");
+                return new ClientResponse
+                {
+                    Response = "Failed to create or retrieve agent.",
+                    AgentThread = null
+                };
+                
+            }
+
+            var threadFoundryResponse = await _agentService.GetOrCreateThreadAsync(threadId);
+            if (string.IsNullOrEmpty(threadFoundryResponse.AgentThread.ThreadId))
+            {
+                _logger.LogError("Failed to create or retrieve thread.");
+                return new ClientResponse
+                {
+                    Response = "Failed to create or retrieve thread.",
+                    AgentThread = null
+                };
+            }
+
+            _logger.LogInformation("Agent and Thread retrieved or created.");
+            // You can implement logic for GET requests here if needed
+            return new ClientResponse
+            {
+                Response = "Agent and thread successfully configured.",
+                AgentThread = new AgentThread
+                {
+                    AgentId = agentFoundryResponse.AgentThread.AgentId,
+                    ThreadId = threadFoundryResponse.AgentThread.ThreadId
+                }
+            };
         }
     }
 

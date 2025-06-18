@@ -10,6 +10,7 @@ var builder = FunctionsApplication.CreateBuilder(args);
 
 builder.ConfigureFunctionsWebApplication();
 
+// Add our custom service to the container
 builder.Services.AddAgentService(builder.Configuration);
 
 // Application Insights isn't enabled by default. See https://aka.ms/AAt8mw4.

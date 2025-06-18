@@ -282,12 +282,20 @@ namespace Foundry
 
             await foreach (PersistentThreadMessage threadMessage in messages)
             {
-                _threadMessages.Messages.Add(threadMessage.Content);
+                foreach (MessageContent contentItem in threadMessage.ContentItems)
+                {
+                    if (contentItem is MessageTextContent textItem)
+                    {
+                        _threadMessages.Messages.Add(textItem.Text);
+                        Console.WriteLine($" Item: {textItem.Text}");
+                    }
+                }
+                
             }
 
             return new ClientResponse
             {
-                Response =  _threadMessages.Messages[0],
+                Response =  _threadMessages.Messages[0], // Return the first message for simplicity
                 AgentThread = new AgentThread
                 {
                     ThreadId = threadId
