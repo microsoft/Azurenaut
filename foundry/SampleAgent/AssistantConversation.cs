@@ -26,17 +26,47 @@ public class AssistantConversation
         string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
         AgentThread requestAgentThread = JsonSerializer.Deserialize<AgentThread>(requestBody);
 
-        return new OkObjectResult("Welcome to Azure Functions!");
+        _logger.LogInformation("Received request for thread {ThreadId} with AgentId {Message}", requestAgentThread.ThreadId, requestAgentThread.Message);
+        var assistantConversationResponse = await SendThreadMessageAsync(requestAgentThread, requestAgentThread.Message);
+        if (assistantConversationResponse.AgentThread == null)
+        {
+            _logger.LogError("Failed to send message or start run for thread {ThreadId}", requestAgentThread.ThreadId);
+            return new BadRequestObjectResult("Failed to send message or start run.");
+        }
+
+        _logger.LogInformation("Message sent successfully to thread {ThreadId}", requestAgentThread.ThreadId);
+
+        var conversationMessages = await _agentService.GetThreadMessagesAsync(requestAgentThread.ThreadId);
+        if (conversationMessages == null)
+        {
+            _logger.LogWarning("No messages found in thread {ThreadId}", requestAgentThread.ThreadId);
+            return new NotFoundObjectResult("No messages found in the thread.");
+        }
+
+        return new OkObjectResult
+        (
+            new ClientResponse
+                {
+                    Response = conversationMessages.Response,
+                    AgentThread = new AgentThread
+                    {
+                        ThreadId = conversationMessages.AgentThread.ThreadId,
+                        AgentId = conversationMessages.AgentThread.AgentId,
+                        RunId = conversationMessages.AgentThread.RunId,
+                        Messages = conversationMessages.AgentThread.Messages
+                    }
+                }
+        );
     }
 
-    private async Task<ClientResponse> SendThreadMessageAsync(string threadId, string messageContent)
+    private async Task<ClientResponse> SendThreadMessageAsync(AgentThread agentThread, string messageContent)
     {
-        _logger.LogInformation("Sending message to thread {ThreadId}", threadId);
+        _logger.LogInformation("Sending message to thread {ThreadId}", agentThread.Message);
 
-        var response = await _agentService.CreateThreadMessage(threadId, messageContent);
+        var response = await _agentService.CreateThreadMessage(agentThread.ThreadId, agentThread.Message);
         if (response == null || string.IsNullOrEmpty(response.Response))
         {
-            _logger.LogError("Failed to send message to thread {ThreadId}", threadId);
+            _logger.LogError("Failed to send message to thread {ThreadId}", agentThread.ThreadId);
             return new ClientResponse
             {
                 Response = "Failed to send message.",
@@ -44,6 +74,26 @@ public class AssistantConversation
             };
         }
 
-        return response;
+        var run = await _agentService.StartRunAsync(agentThread.ThreadId, agentThread.AgentId);
+        if (run == null || string.IsNullOrEmpty(run.Response))
+        {
+            _logger.LogError("Failed to start run for thread {ThreadId}", agentThread.ThreadId);
+            return new ClientResponse
+            {
+                Response = "Failed to start run.",
+                AgentThread = null
+            };
+        }
+
+        return new ClientResponse
+        {
+            Response = run.Response,
+            AgentThread = new AgentThread
+            {
+                ThreadId = run.AgentThread.ThreadId,
+                AgentId = run.AgentThread.AgentId,
+                RunId = run.AgentThread.RunId
+            }
+        };
     }
 }

@@ -9,6 +9,7 @@ using Azure.AI.Agents.Persistent;
 using Azure.Identity;
 using Azure;
 using System.IO;
+using OpenAI.VectorStores;
 
 namespace Foundry
 {
@@ -49,6 +50,7 @@ namespace Foundry
         private string _instructions;
         private string _agentNamePrefix;
         private string _threadNamePrefix;
+        private string _blobUri;
 
         private PersistentAgentsClient _client;
         private PersistentAgent _agent;
@@ -97,6 +99,10 @@ namespace Foundry
             {
                 _threadNamePrefix = config.ThreadNamePrefix;
             }
+            if (!string.IsNullOrEmpty(config.BlobUri))
+            {
+                _blobUri = config.BlobUri;
+            }
             if (_client == null)
             {
                 throw new System.Exception("AI Foundry client is not initialized. Please check your configuration.");
@@ -121,20 +127,36 @@ namespace Foundry
         {
             if (string.IsNullOrEmpty(agentId))
             {
+                // Console.WriteLine("File URI: " + _blobUri);
+                // var vectorStoreDataSource = new VectorStoreDataSource(
+                //     assetIdentifier: _blobUri,
+                //     assetType: VectorStoreDataSourceAssetType.UriAsset
+                // ); 
+
+                // PersistentAgentsVectorStore vectorStore = await _client.VectorStores.CreateVectorStoreAsync(
+                //     name: "sample_vector_store",
+                //     storeConfiguration: new VectorStoreConfiguration(
+                //         dataSources: [vectorStoreDataSource]
+                //     ));
+
+                // FileSearchToolResource fileSearchResource = new([vectorStore.Id], null);
+
+                // List<ToolDefinition> tools = [new FileSearchToolDefinition()];
+
                 _agent = await _client.Administration.CreateAgentAsync(
                     name: $"{_agentNamePrefix}_{System.Guid.NewGuid()}",
                     model: _model,
                     instructions: _instructions
+ //                   tools: tools,
+ //                   toolResources: new ToolResources() { FileSearch = fileSearchResource }
                 );
             }
             else
                 _agent = await _client.Administration.GetAgentAsync(agentId);
 
-            return new ClientResponse
-            {
+            return new ClientResponse{
                 Response = $"Agent created or retrieved: {_agent.Name} with ID {_agent.Id}",
-                AgentThread = new AgentThread
-                {
+                AgentThread = new AgentThread{
                     AgentId = _agent.Id,
                     ThreadId = _thread?.Id // Assuming thread is set elsewhere
                 }
@@ -199,11 +221,10 @@ namespace Foundry
 
             return new ClientResponse
             {
-                Response = $"Message created in thread:  with ID {threadId}",
+                Response = $"Message created in thread:  with ID {_message.Id}",
                 AgentThread = new AgentThread
                 {
-                    AgentId = _agent.Id,
-                    ThreadId = _thread.Id
+                    ThreadId = threadId
                 }
             };
         }
@@ -276,21 +297,22 @@ namespace Foundry
                 throw new System.Exception("Thread ID is not provided. Please provide a valid thread ID.");
             }
 
+            Console.WriteLine($"Retrieving messages for thread ID: {threadId}");
             AsyncPageable<PersistentThreadMessage> messages = _client.Messages.GetMessagesAsync(
                 threadId: threadId,
                 order: ListSortOrder.Ascending);
+
+            _threadMessages = new ThreadMessages();
+            _threadMessages.Messages = new List<string>();
 
             await foreach (PersistentThreadMessage threadMessage in messages)
             {
                 foreach (MessageContent contentItem in threadMessage.ContentItems)
                 {
                     if (contentItem is MessageTextContent textItem)
-                    {
                         _threadMessages.Messages.Add(textItem.Text);
-                        Console.WriteLine($" Item: {textItem.Text}");
-                    }
                 }
-                
+
             }
 
             return new ClientResponse
@@ -298,7 +320,8 @@ namespace Foundry
                 Response =  _threadMessages.Messages[0], // Return the first message for simplicity
                 AgentThread = new AgentThread
                 {
-                    ThreadId = threadId
+                    ThreadId = threadId,
+                    Messages = _threadMessages.Messages
                 }
             };
         }

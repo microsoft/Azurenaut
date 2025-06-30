@@ -20,11 +20,12 @@ namespace Foundry
         public string AgentId { get; set; }
         public string RunId { get; set; }
         public string Message { get; set; }
+        public IList<string> Messages { get; set; }
     }
 
     public class ThreadMessages
     {
-        public List<string> Messages { get; set; } = new List<string>();
+        public IList<string> Messages { get; set; }
     }
 
     public class AgentConfig
@@ -35,5 +36,6 @@ namespace Foundry
         public string Instructions { get; set; }
         public string AgentNamePrefix { get; set; }
         public string ThreadNamePrefix { get; set; }
+        public string BlobUri { get; set; }
     }
 }
