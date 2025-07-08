@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using System.Runtime.InteropServices;
@@ -43,6 +44,7 @@ namespace Foundry
 
     public class AgentService : IAgentService
     {
+        private readonly ILogger<AgentService> _logger;
         private string _endpoint;
         private string _apiKey;
         private string _model;
@@ -71,8 +73,10 @@ namespace Foundry
         /// </remarks>
         /// <exception cref="System.Exception">Thrown if the AI Foundry client is not initialized due to missing configuration.</exception>
         /// <returns>An instance of the <see cref="AgentService"/> class.</returns>     
-        public AgentService(IOptions<AgentConfig> options)
+        public AgentService(ILogger<AgentService> logger, IOptions<AgentConfig> options)
         {
+            _logger = logger ?? throw new System.ArgumentNullException(nameof(logger));
+
             var config = options.Value;
             if (!string.IsNullOrEmpty(config.Endpoint))
             {
@@ -110,6 +114,61 @@ namespace Foundry
         }
 
         /// <summary>
+        /// Configures the assistant environment by creating or retrieving an agent and a thread.
+        /// </summary>
+        /// <param name="agentId">The ID of the agent to retrieve or create.</param>
+        /// <param name="threadId">The ID of the thread to retrieve or create.</param>
+        /// <returns>A `ClientResponse` object containing the response message and the agent's thread information.</returns>
+        /// <remarks>
+        /// This method is used to set up the assistant environment by either creating a new agent and thread or retrieving existing ones.
+        /// It logs the start of the configuration process and checks if the agent and thread IDs are provided.
+        /// If the IDs are not provided, it creates new ones using the AI Foundry service's administration client.
+        /// If the IDs are provided, it retrieves the existing agent and thread.
+        /// The method returns a `ClientResponse` object containing the response message and the agent's thread information.
+        /// </remarks>
+        /// <exception cref="System.Exception">Thrown if the agent or thread cannot be created or retrieved.</exception>
+        /// <returns>A `ClientResponse` object containing the response message and the agent's thread information.</returns>
+        public async Task<ClientResponse> ConfigureAssistantEnvironment(string agentId, string threadId)
+        {
+            _logger.LogInformation("Starting Agent configuration.");
+
+            var agentFoundryResponse = await GetOrCreateAgentAsync(agentId);
+            if (string.IsNullOrEmpty(agentFoundryResponse.AgentThread.AgentId))
+            {
+                _logger.LogError("Failed to create or retrieve agent.");
+                return new ClientResponse
+                {
+                    Response = "Failed to create or retrieve agent.",
+                    AgentThread = null
+                };
+                
+            }
+
+            var threadFoundryResponse = await GetOrCreateThreadAsync(threadId);
+            if (string.IsNullOrEmpty(threadFoundryResponse.AgentThread.ThreadId))
+            {
+                _logger.LogError("Failed to create or retrieve thread.");
+                return new ClientResponse
+                {
+                    Response = "Failed to create or retrieve thread.",
+                    AgentThread = null
+                };
+            }
+
+            _logger.LogInformation("Agent and Thread retrieved or created.");
+            // You can implement logic for GET requests here if needed
+            return new ClientResponse
+            {
+                Response = "Agent and thread successfully configured.",
+                AgentThread = new AgentThread
+                {
+                    AgentId = agentFoundryResponse.AgentThread.AgentId,
+                    ThreadId = threadFoundryResponse.AgentThread.ThreadId
+                }
+            };
+        }
+
+        /// <summary>
         /// Creates or retrieves an agent with the specified ID.
         /// If no ID is provided, a new agent is created with a unique name.
         /// If an ID is provided, the existing agent is retrieved.
@@ -123,7 +182,7 @@ namespace Foundry
         /// The agent's model and instructions are set based on the configuration.
         /// The method returns a `ClientResponse` object containing the response message and the agent's thread information.
         /// </remarks>
-        public async Task<ClientResponse> GetOrCreateAgentAsync([Optional] string agentId)
+        private async Task<ClientResponse> GetOrCreateAgentAsync([Optional] string agentId)
         {
             if (string.IsNullOrEmpty(agentId))
             {
@@ -147,16 +206,18 @@ namespace Foundry
                     name: $"{_agentNamePrefix}_{System.Guid.NewGuid()}",
                     model: _model,
                     instructions: _instructions
- //                   tools: tools,
- //                   toolResources: new ToolResources() { FileSearch = fileSearchResource }
+                //                   tools: tools,
+                //                   toolResources: new ToolResources() { FileSearch = fileSearchResource }
                 );
             }
             else
                 _agent = await _client.Administration.GetAgentAsync(agentId);
 
-            return new ClientResponse{
+            return new ClientResponse
+            {
                 Response = $"Agent created or retrieved: {_agent.Name} with ID {_agent.Id}",
-                AgentThread = new AgentThread{
+                AgentThread = new AgentThread
+                {
                     AgentId = _agent.Id,
                     ThreadId = _thread?.Id // Assuming thread is set elsewhere
                 }
@@ -176,7 +237,7 @@ namespace Foundry
         /// The thread is created or retrieved using the AI Foundry service's threads client.
         /// The method returns a `ClientResponse` object containing the response message and the agent's thread information.
         /// </remarks>
-        public async Task<ClientResponse> GetOrCreateThreadAsync([Optional] string threadId)
+        private async Task<ClientResponse> GetOrCreateThreadAsync([Optional] string threadId)
         {
             if (string.IsNullOrEmpty(threadId))
                 _thread = await _client.Threads.CreateThreadAsync();
