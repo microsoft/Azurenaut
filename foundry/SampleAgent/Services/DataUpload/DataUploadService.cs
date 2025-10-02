@@ -3,6 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using Azure.AI.Projects;
 using Azure.AI.Agents.Persistent;
@@ -11,6 +13,7 @@ using Azure;
 using OpenAI.VectorStores;
 using System.Text.Json;
 using Foundry;
+using Microsoft.AspNetCore.Http.Features;
 
 namespace SampleAgent.Services.DataUpload;
 
@@ -19,6 +22,18 @@ public static class DataUploadServiceExtension
     public static void AddDataUploadService(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<AgentConfig>(configuration.GetSection("AIFoundry"));
+        services.Configure<FormOptions>(options =>
+        {
+            options.MultipartBodyLengthLimit = Int32.MaxValue;
+            options.MultipartBoundaryLengthLimit = Int32.MaxValue;
+            options.MultipartHeadersCountLimit = Int32.MaxValue;
+            options.MultipartHeadersLengthLimit = Int32.MaxValue;
+            options.BufferBodyLengthLimit = Int32.MaxValue;
+            options.KeyLengthLimit = Int32.MaxValue;
+            options.MemoryBufferThreshold = Int32.MaxValue;
+            options.ValueCountLimit = Int32.MaxValue;
+            options.ValueLengthLimit = Int32.MaxValue;
+        });
         services.AddSingleton<IDataUploadService, DataUploadService>();
     }
 }
@@ -173,4 +188,74 @@ public class DataUploadService : IDataUploadService
         }
     }
 
+    public async Task<string> ProcessMultipartReaderAsync(string boundry, Stream contentStream)
+    {
+        var reader = new MultipartReader(boundry, contentStream);
+
+        MultipartSection? section;
+
+        //process each section in multipart body
+        while ((section = await reader.ReadNextSectionAsync()) != null)
+        {
+            var contentDisposition = section.GetContentDispositionHeader();
+            if (contentDisposition != null && contentDisposition.IsFileDisposition())
+            {
+                _logger.LogInformation($"Processing file: {contentDisposition.FileName.Value}");
+            }
+            else if (contentDisposition != null && contentDisposition.IsFormDisposition())
+            {
+                AgentThread requestAgentThread = JsonSerializer.Deserialize<AgentThread>(section.Body);
+                _logger.LogInformation("ThreadID: {ThreadId} -- AgentId: {AgenetId}", requestAgentThread.ThreadId, requestAgentThread.AgentId);
+            }
+        }
+
+        return "good";
+    }
+
 }
+
+/* /**
+MultipartSection? section;
+            while ((section = await reader.ReadNextSectionAsync()) != null)
+            {
+                if (!ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out var contentDisposition))
+                {
+                    _logger.LogWarning("Skipping section with invalid content-disposition header.");
+                    continue;
+                }
+
+                var fieldName = HeaderUtilities.RemoveQuotes(contentDisposition.Name).Value;
+
+                // JSON form-data part (e.g., name="metadata"; filename absent)
+                if (IsFormField(contentDisposition) && fieldName.Equals("json", StringComparison.OrdinalIgnoreCase))
+                {
+                    requestAgentThread = JsonSerializer.Deserialize<AgentThread>(section.Body);
+                    _logger.LogInformation("ThreadID: {ThreadId} -- AgentId: {AgenetId}", requestAgentThread.ThreadId, requestAgentThread.AgentId);
+                }
+                else if (IsFile(contentDisposition))
+                {
+                    // Process file
+                    var fileName = contentDisposition.FileName.Value ?? contentDisposition.FileNameStar.Value;
+                    _logger.LogInformation("#########Uploaded file: {FileName})", fileName);
+
+                    using var memoryStream = new MemoryStream();
+                    await section.Body.CopyToAsync(memoryStream);
+                    memoryStream.Position = 0;
+
+                    var formFile = new FormFile(memoryStream, 0, memoryStream.Length, contentDisposition.Name.Value, fileName)
+                    {
+                        Headers = new HeaderDictionary(),
+                        ContentType = section.ContentType
+                    };
+                    _logger.LogInformation(" file: {FileName}, FileId: {FileId}", formFile.FileName, formFile.Name);
+
+                    var uploadResult = await _dataUploadService.UploadFileAsync(formFile);
+                    _fileUploadMetadata = new FileUploadMetadata
+                    {
+                        FileName = uploadResult.FileName,
+                        ContentType = uploadResult.ContentType,
+                        FileSizeBytes = uploadResult.FileSizeBytes
+                    };
+                    _logger.LogInformation("Uploaded file: {FileName}, FileId: {FileId}", uploadResult.FileName, uploadResult.FileId);
+                }
+            } */

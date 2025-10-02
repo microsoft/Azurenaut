@@ -35,4 +35,5 @@ public interface IDataUploadService
     /// <returns>File upload result with file ID and metadata</returns>
     Task<DataUploadResult> UploadFileFromStreamAsync(Stream stream, string fileName, string contentType, string? agentId = null);
 
+    Task<string> ProcessMultipartReaderAsync(string boundry, Stream contentStream);
 }

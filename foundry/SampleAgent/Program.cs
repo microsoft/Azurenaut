@@ -2,9 +2,9 @@ using Microsoft.Azure.Functions.Worker.Builder;
 using Microsoft.Extensions.Hosting;
 using Foundry;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
-using SampleAgent.Services.UploadData;
 using SampleAgent.Services.DataUpload;
 
 var builder = FunctionsApplication.CreateBuilder(args);

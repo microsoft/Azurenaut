@@ -16,6 +16,7 @@ public class DataUpload
 {
     private readonly ILogger<DataUpload> _logger;
     private readonly IDataUploadService _dataUploadService;
+    private FileUploadMetadata _fileUploadMetadata;
 
     public DataUpload(ILogger<DataUpload> logger, IDataUploadService dataUploadService)
     {
@@ -47,65 +48,16 @@ public class DataUpload
                 return new BadRequestObjectResult(new { Error = "Only GET and POST methods are supported" });
             }
 
-            if (!TryGetBoundary(req.ContentType, out var boundary))
+            var boundry = HeaderUtilities.RemoveQuotes(MediaTypeHeaderValue.Parse(req.ContentType).Boundary).Value;
+            if (string.IsNullOrWhiteSpace(boundry))
             {
                 return new BadRequestObjectResult("Request must be multipart/form-data with a boundary.");
             }
 
-            var reader = new MultipartReader(boundary, req.Body);
+            _logger.LogInformation("@@@@@@@@@@ Boundry: {Boundry}", boundry);
+            var upd = _dataUploadService.ProcessMultipartReaderAsync(boundry, req.Body);
 
-            MultipartSection? section;
-            while ((section = await reader.ReadNextSectionAsync()) != null)
-            {
-                var contentDisposition = section.GetContentDispositionHeader();
-                if (contentDisposition == null)
-                {
-                    continue;
-                }
-
-                // JSON form-data part (e.g., name="metadata"; filename absent)
-                if (IsFormField(contentDisposition))
-                {
-                    // Process form field
-                    var fieldName = contentDisposition.Name.Value;
-                    using var streamReader = new StreamReader(section.Body);
-                    var fieldValue = await streamReader.ReadToEndAsync();
-                    _logger.LogInformation("Form field: {FieldName} = {FieldValue}", fieldName, fieldValue);
-                }
-                else if (IsFile(contentDisposition))
-                {
-                    // Process file
-                    var fileName = contentDisposition.FileName.Value ?? contentDisposition.FileNameStar.Value;
-                    if (string.IsNullOrEmpty(fileName))
-                    {
-                        continue;
-                    }
-
-                    using var memoryStream = new MemoryStream();
-                    await section.Body.CopyToAsync(memoryStream);
-                    memoryStream.Position = 0;
-
-                    var formFile = new FormFile(memoryStream, 0, memoryStream.Length, contentDisposition.Name.Value, fileName)
-                    {
-                        Headers = new HeaderDictionary(),
-                        ContentType = section.ContentType
-                    };
-
-                    // For this example, we assume no agent association
-                    var uploadResult = await _dataUploadService.UploadFileAsync(formFile);
-                    _logger.LogInformation("Uploaded file: {FileName}, FileId: {FileId}", uploadResult.FileName, uploadResult.FileId);
-                }
-            }
-
-            // parse http request with content type application/json with T<AgentThread>
-            string requestBody = await new StreamReader(req.).ReadToEndAsync();
-            AgentThread requestAgentThread = JsonSerializer.Deserialize<AgentThread>(requestBody.);
-
-            // Upload files
-            var uploadResults = await _dataUploadService.UploadFilesAsync(req.Form.Files, requestAgentThread);
-            var uploadResultsList = uploadResults.ToList();
-
-            return new OkObjectResult(uploadResultsList);
+            return new OkObjectResult(upd);
 
         }
         catch (Exception ex)
@@ -114,29 +66,6 @@ public class DataUpload
             return new ObjectResult(new { Error = ex.Message }) { StatusCode = 500 };
         }
     }
-
-    private static bool TryGetBoundary(string? contentType, out string boundary)
-    {
-        boundary = string.Empty;
-
-        if (string.IsNullOrWhiteSpace(contentType) ||
-            !MediaTypeHeaderValue.TryParse(contentType, out var mediaType) ||
-            string.IsNullOrEmpty(mediaType.Boundary.Value))
-        {
-            return false;
-        }
-
-        boundary = HeaderUtilities.RemoveQuotes(mediaType.Boundary).Value ?? string.Empty;
-        return !string.IsNullOrWhiteSpace(boundary);
-    }
     
-    private static bool IsFormField(ContentDispositionHeaderValue disposition) =>
-        disposition.DispositionType.Equals("form-data") &&
-        string.IsNullOrEmpty(disposition.FileName.Value) &&
-        string.IsNullOrEmpty(disposition.FileNameStar.Value);
-
-    private static bool IsFile(ContentDispositionHeaderValue disposition) =>
-        disposition.DispositionType.Equals("form-data") &&
-        (!string.IsNullOrEmpty(disposition.FileName.Value) ||
-         !string.IsNullOrEmpty(disposition.FileNameStar.Value));
+    
 }
