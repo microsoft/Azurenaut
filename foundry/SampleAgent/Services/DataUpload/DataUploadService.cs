@@ -10,7 +10,6 @@ using Azure.AI.Projects;
 using Azure.AI.Agents.Persistent;
 using Azure.Identity;
 using Azure;
-using OpenAI.VectorStores;
 using System.Text.Json;
 using Foundry;
 using Microsoft.AspNetCore.Http.Features;
@@ -46,6 +45,7 @@ public class DataUploadService : IDataUploadService
     private readonly ILogger<DataUploadService> _logger;
     private readonly PersistentAgentsClient _client;
     private readonly AgentConfig _config;
+    private PersistentAgent _agent;
 
     // Supported file types for Azure AI Foundry
     private static readonly HashSet<string> SupportedFileTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -212,50 +212,43 @@ public class DataUploadService : IDataUploadService
         return "good";
     }
 
-}
+    public async Task<VectorStoreResult> CreateVectorStoreAsync()
+    {
+        VectorStoreDataSource dataSource = new VectorStoreDataSource(
+            assetIdentifier: "sd",
+            assetType: VectorStoreDataSourceAssetType.UriAsset
+        );
 
-/* /**
-MultipartSection? section;
-            while ((section = await reader.ReadNextSectionAsync()) != null)
+        var vectorStore = await _client.VectorStores.CreateVectorStoreAsync(
+            name: System.Guid.NewGuid().ToString(),
+            storeConfiguration: new VectorStoreConfiguration(
+                dataSources: [dataSource]
+            )
+        );
+
+        return new VectorStoreResult
+        {
+            VectorStoreId = vectorStore.Value.Id,
+            Name = vectorStore.Value.Name
+        };
+    }
+
+    public async Task<AgentThread> UpdateAgent(AgentThread agentThread, VectorStoreResult storeResult)
+    {
+        FileSearchToolResource fileSearchResource = new([storeResult.VectorStoreId], null);
+        List<ToolDefinition> tools = [new FileSearchToolDefinition()];
+
+        _agent = await _client.Administration.UpdateAgentAsync(
+            assistantId: agentThread.AgentId,
+            tools: tools,
+            toolResources: new ToolResources
             {
-                if (!ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out var contentDisposition))
-                {
-                    _logger.LogWarning("Skipping section with invalid content-disposition header.");
-                    continue;
-                }
+                FileSearch = fileSearchResource
+            }
 
-                var fieldName = HeaderUtilities.RemoveQuotes(contentDisposition.Name).Value;
+        );
 
-                // JSON form-data part (e.g., name="metadata"; filename absent)
-                if (IsFormField(contentDisposition) && fieldName.Equals("json", StringComparison.OrdinalIgnoreCase))
-                {
-                    requestAgentThread = JsonSerializer.Deserialize<AgentThread>(section.Body);
-                    _logger.LogInformation("ThreadID: {ThreadId} -- AgentId: {AgenetId}", requestAgentThread.ThreadId, requestAgentThread.AgentId);
-                }
-                else if (IsFile(contentDisposition))
-                {
-                    // Process file
-                    var fileName = contentDisposition.FileName.Value ?? contentDisposition.FileNameStar.Value;
-                    _logger.LogInformation("#########Uploaded file: {FileName})", fileName);
+        return agentThread;
+    }
 
-                    using var memoryStream = new MemoryStream();
-                    await section.Body.CopyToAsync(memoryStream);
-                    memoryStream.Position = 0;
-
-                    var formFile = new FormFile(memoryStream, 0, memoryStream.Length, contentDisposition.Name.Value, fileName)
-                    {
-                        Headers = new HeaderDictionary(),
-                        ContentType = section.ContentType
-                    };
-                    _logger.LogInformation(" file: {FileName}, FileId: {FileId}", formFile.FileName, formFile.Name);
-
-                    var uploadResult = await _dataUploadService.UploadFileAsync(formFile);
-                    _fileUploadMetadata = new FileUploadMetadata
-                    {
-                        FileName = uploadResult.FileName,
-                        ContentType = uploadResult.ContentType,
-                        FileSizeBytes = uploadResult.FileSizeBytes
-                    };
-                    _logger.LogInformation("Uploaded file: {FileName}, FileId: {FileId}", uploadResult.FileName, uploadResult.FileId);
-                }
-            } */
+}
