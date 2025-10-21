@@ -18,6 +18,11 @@ namespace SampleAgent.Services.DataUpload;
 
 public static class DataUploadServiceExtension
 {
+    /// <summary>
+    /// Add Data Upload Service to DI container
+    /// </summary>
+    /// <param name="services"></param>
+    /// <param name="configuration"></param>
     public static void AddDataUploadService(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<AgentConfig>(configuration.GetSection("AIFoundry"));
@@ -67,6 +72,13 @@ public class DataUploadService : IDataUploadService
 
     }
 
+    /// <summary>
+    /// Upload a single file to Azure AI Foundry
+    /// </summary>
+    /// <param name="file"></param>
+    /// <param name="agentId"></param>
+    /// <param name="fileName"></param>
+    /// <returns></returns>
     public async Task<DataUploadResult> UploadFileAsync(IFormFile file, string? agentId = null, string? fileName = null)
     {
         if (file == null || file.Length == 0)
@@ -126,6 +138,12 @@ public class DataUploadService : IDataUploadService
         }
     }
 
+    /// <summary>
+    /// Upload multiple files to Azure AI Foundry
+    /// </summary>
+    /// <param name="files"></param>
+    /// <param name="agentThread"></param>
+    /// <returns></returns>
     public async Task<IEnumerable<DataUploadResult>> UploadFilesAsync(IFormFileCollection files, AgentThread agentThread)
     {
         if (files == null || files.Count == 0)
@@ -147,6 +165,14 @@ public class DataUploadService : IDataUploadService
         return results;
     }
 
+    /// <summary>
+    /// Upload a file from a stream to Azure AI Foundry
+    /// </summary>
+    /// <param name="stream"></param>
+    /// <param name="fileName"></param>
+    /// <param name="contentType"></param>
+    /// <param name="agentId"></param>
+    /// <returns></returns>
     public async Task<DataUploadResult> UploadFileFromStreamAsync(Stream stream, string fileName, string contentType, string? agentId = null)
     {
         try
@@ -188,6 +214,12 @@ public class DataUploadService : IDataUploadService
         }
     }
 
+    /// <summary>
+    /// Process multipart reader to extract files and form data
+    /// </summary>
+    /// <param name="boundry"></param>
+    /// <param name="contentStream"></param>
+    /// <returns></returns>
     public async Task<string> ProcessMultipartReaderAsync(string boundry, Stream contentStream)
     {
         var reader = new MultipartReader(boundry, contentStream);
@@ -212,6 +244,10 @@ public class DataUploadService : IDataUploadService
         return "good";
     }
 
+    /// <summary>
+    /// Create a vector store in Azure AI Foundry
+    /// </summary>
+    /// <returns></returns>
     public async Task<VectorStoreResult> CreateVectorStoreAsync()
     {
         VectorStoreDataSource dataSource = new VectorStoreDataSource(
@@ -233,6 +269,12 @@ public class DataUploadService : IDataUploadService
         };
     }
 
+    /// <summary>
+    /// Update the agent to include the file search tool with the new vector store
+    /// </summary>
+    /// <param name="agentThread"></param>
+    /// <param name="storeResult"></param>
+    /// <returns></returns>
     public async Task<AgentThread> UpdateAgent(AgentThread agentThread, VectorStoreResult storeResult)
     {
         FileSearchToolResource fileSearchResource = new([storeResult.VectorStoreId], null);
