@@ -248,24 +248,54 @@ public class DataUploadService : IDataUploadService
     /// Create a vector store in Azure AI Foundry
     /// </summary>
     /// <returns></returns>
-    public async Task<VectorStoreResult> CreateVectorStoreAsync()
+    public async Task<VectorStoreResult> GetOrCreateVectorStoreAsync(AgentThread agentThread)
     {
+        _agent = await _client.Administration.GetAgentAsync(agentThread.AgentId);
+
+        // If agent has existing vector store, return the store id
+        if (_agent.Tools != null && _agent.Tools.Any(t => t is FileSearchToolDefinition))
+        {
+            _logger.LogInformation("Agent {AgentId} already has a vector store associated", agentThread.AgentId);
+            var fileSearchTool = _agent.Tools.First(t => t is FileSearchToolDefinition) as FileSearchToolDefinition;
+            var fileSearchResource = _agent.ToolResources?.FileSearch;
+
+            if (fileSearchResource != null && fileSearchResource.VectorStoreIds.Any())
+            {
+                return new VectorStoreResult
+                {
+                    VectorStoreId = fileSearchResource.VectorStoreIds.First()
+                };
+            }
+        }
+
+        _logger.LogInformation("Agent {AgentId} does not have a vector store. Creating new vector store.", agentThread.AgentId);
+        PersistentAgentsVectorStore? vectorStore;
         VectorStoreDataSource dataSource = new VectorStoreDataSource(
-            assetIdentifier: "sd",
+            assetIdentifier: "ds-"+System.Guid.NewGuid().ToString("N").Substring(0, 6),
             assetType: VectorStoreDataSourceAssetType.UriAsset
         );
 
-        var vectorStore = await _client.VectorStores.CreateVectorStoreAsync(
-            name: System.Guid.NewGuid().ToString(),
-            storeConfiguration: new VectorStoreConfiguration(
-                dataSources: [dataSource]
-            )
-        );
+        try
+        {
+            vectorStore = await _client.VectorStores.CreateVectorStoreAsync(
+                name: "store-"+System.Guid.NewGuid().ToString("N").Substring(0, 6),
+                storeConfiguration: new VectorStoreConfiguration(
+                    dataSources: [dataSource]
+                )
+            );
+            _logger.LogInformation("Successfully created vector store: {VectorStoreId}", vectorStore.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating vector store data source");
+            throw;
+        }
+        
 
         return new VectorStoreResult
         {
-            VectorStoreId = vectorStore.Value.Id,
-            Name = vectorStore.Value.Name
+            VectorStoreId = vectorStore.Id,
+            Name = vectorStore.Name
         };
     }
 
@@ -275,20 +305,32 @@ public class DataUploadService : IDataUploadService
     /// <param name="agentThread"></param>
     /// <param name="storeResult"></param>
     /// <returns></returns>
-    public async Task<AgentThread> UpdateAgent(AgentThread agentThread, VectorStoreResult storeResult)
+    public async Task<AgentThread> UpdateAgentAsync(AgentThread agentThread, VectorStoreResult storeResult)
     {
         FileSearchToolResource fileSearchResource = new([storeResult.VectorStoreId], null);
         List<ToolDefinition> tools = [new FileSearchToolDefinition()];
 
-        _agent = await _client.Administration.UpdateAgentAsync(
-            assistantId: agentThread.AgentId,
-            tools: tools,
-            toolResources: new ToolResources
-            {
-                FileSearch = fileSearchResource
-            }
+        try
+        {
+            _logger.LogInformation("Updating agent {AgentId} to include file search tool with vector store {VectorStoreId}",
+                agentThread.AgentId, storeResult.VectorStoreId);
 
-        );
+            _agent = await _client.Administration.UpdateAgentAsync(
+                assistantId: agentThread.AgentId,
+                tools: tools,
+                toolResources: new ToolResources
+                {
+                    FileSearch = fileSearchResource
+                }
+            );
+            _logger.LogInformation("Successfully updated agent {AgentId} with file search tool", agentThread.AgentId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating agent with file search tool");
+            throw;
+        }
+        
 
         return agentThread;
     }
