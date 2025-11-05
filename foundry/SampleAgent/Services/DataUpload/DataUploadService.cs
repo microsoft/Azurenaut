@@ -13,6 +13,8 @@ using Azure;
 using System.Text.Json;
 using Foundry;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.FileProviders.Embedded;
+using System.Runtime.CompilerServices;
 
 namespace SampleAgent.Services.DataUpload;
 
@@ -178,10 +180,10 @@ public class DataUploadService : IDataUploadService
         try
         {
             _logger.LogInformation("Uploading file from stream: {FileName}", fileName);
-
+            
             var uploadData = await _client.Files.UploadFileAsync(
                 data: stream,
-                purpose: "assistants",
+                purpose: PersistentAgentFilePurpose.Agents,
                 filename: fileName
             );
 
@@ -192,12 +194,12 @@ public class DataUploadService : IDataUploadService
                 FileSizeBytes = uploadData.Value.Size,
                 ContentType = contentType,
                 UploadedAt = DateTime.UtcNow,
-                Status = uploadData.Value.Status == "uploaded" ? UploadStatus.Completed : UploadStatus.Pending,
+                Status = uploadData.Value.Status == "processed" ? UploadStatus.Completed : UploadStatus.Pending,
                 AssociatedAgentId = agentId
             };
 
-            _logger.LogInformation("Successfully uploaded file: {FileId} - {FileName}",
-                result.FileId, fileName);
+            _logger.LogInformation("Successfully uploaded file: {FileId} - {FileName} - status: {Status}",
+                result.FileId, fileName, uploadData.Value.Status);
 
             return result;
         }
@@ -238,6 +240,7 @@ public class DataUploadService : IDataUploadService
             {
                 AgentThread requestAgentThread = JsonSerializer.Deserialize<AgentThread>(section.Body);
                 _logger.LogInformation("ThreadID: {ThreadId} -- AgentId: {AgenetId}", requestAgentThread.ThreadId, requestAgentThread.AgentId);
+                    
             }
         }
 
@@ -251,6 +254,10 @@ public class DataUploadService : IDataUploadService
     public async Task<VectorStoreResult> GetOrCreateVectorStoreAsync(AgentThread agentThread)
     {
         _agent = await _client.Administration.GetAgentAsync(agentThread.AgentId);
+        _logger.LogInformation("Fetched agent details for AgentId: {AgentId}", agentThread.AgentId);
+        _logger.LogInformation("Agent Tools: {Tools}", JsonSerializer.Serialize(_agent.Tools));
+        _logger.LogInformation("Agent Tool Resources: {ToolResources}", JsonSerializer.Serialize(_agent.ToolResources));
+        _logger.LogInformation("Agent Vector Store Ids: {VectorStoreIds}", JsonSerializer.Serialize(_agent.ToolResources?.FileSearch?.VectorStoreIds));
 
         // If agent has existing vector store, return the store id
         if (_agent.Tools != null && _agent.Tools.Any(t => t is FileSearchToolDefinition))
@@ -271,17 +278,18 @@ public class DataUploadService : IDataUploadService
         _logger.LogInformation("Agent {AgentId} does not have a vector store. Creating new vector store.", agentThread.AgentId);
         PersistentAgentsVectorStore? vectorStore;
         VectorStoreDataSource dataSource = new VectorStoreDataSource(
-            assetIdentifier: "ds-"+System.Guid.NewGuid().ToString("N").Substring(0, 6),
+            assetIdentifier: _config.BlobUri,
             assetType: VectorStoreDataSourceAssetType.UriAsset
         );
 
         try
         {
             vectorStore = await _client.VectorStores.CreateVectorStoreAsync(
-                name: "store-"+System.Guid.NewGuid().ToString("N").Substring(0, 6),
-                storeConfiguration: new VectorStoreConfiguration(
-                    dataSources: [dataSource]
-                )
+                name: "vs-" + System.Guid.NewGuid().ToString("N").Substring(0, 6)
+                //fileIds: []
+                //storeConfiguration: new VectorStoreConfiguration(
+                //dataSources: [dataSource]
+                //)
             );
             _logger.LogInformation("Successfully created vector store: {VectorStoreId}", vectorStore.Id);
         }
@@ -290,7 +298,6 @@ public class DataUploadService : IDataUploadService
             _logger.LogError(ex, "Error creating vector store data source");
             throw;
         }
-        
 
         return new VectorStoreResult
         {
@@ -330,9 +337,37 @@ public class DataUploadService : IDataUploadService
             _logger.LogError(ex, "Error updating agent with file search tool");
             throw;
         }
-        
+
 
         return agentThread;
+    }
+
+    public async Task<StoreFile> CreateVectorStoreFilesAync(string fileId, string vectorStoreId)
+    {
+        StoreFile createdStoreFiles = new();
+
+        try
+        {
+            _logger.LogInformation("Creating vector store file for file ID: {FileId}", fileId);
+
+            var vectorStoreFile = await _client.VectorStores.CreateVectorStoreFileAsync(
+                vectorStoreId: vectorStoreId,
+                fileId: fileId
+            );
+
+            _logger.LogInformation("Vector Store File Creation Response: {Response}", JsonSerializer.Serialize(vectorStoreFile));
+
+            return new StoreFile
+            {
+                FileId = vectorStoreFile.Value.Id,
+                VectorStoreId = vectorStoreFile.Value.VectorStoreId
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating vector store file for file ID: {FileId}", fileId);
+            throw;
+        }
     }
 
 }

@@ -17,6 +17,7 @@ public class DataUpload
     private readonly ILogger<DataUpload> _logger;
     private readonly IDataUploadService _dataUploadService;
     private FileUploadMetadata _fileUploadMetadata;
+    private AgentThread _agentThread;
 
     public DataUpload(ILogger<DataUpload> logger, IDataUploadService dataUploadService)
     {
@@ -44,20 +45,38 @@ public class DataUpload
 
             // Handle POST request for file uploads
             if (!req.Method.Equals("POST", StringComparison.OrdinalIgnoreCase))
-            {
                 return new BadRequestObjectResult(new { Error = "Only GET and POST methods are supported" });
-            }
 
-            var boundry = HeaderUtilities.RemoveQuotes(MediaTypeHeaderValue.Parse(req.ContentType).Boundary).Value;
-            if (string.IsNullOrWhiteSpace(boundry))
+            var r = await req.ReadFormAsync();
+            _agentThread = JsonSerializer.Deserialize<AgentThread>(r["agentThread"]);
+            _logger.LogInformation("Processing file upload for ThreadID: {ThreadId} -- AgentId: {AgenetId}", _agentThread.AgentId, _agentThread.ThreadId);
+
+            VectorStoreResult vectorStoreResult = await _dataUploadService.GetOrCreateVectorStoreAsync(_agentThread);
+            _logger.LogInformation("Vector Store ID: {VectorStoreId}", vectorStoreResult.VectorStoreId);
+
+            _logger.LogInformation("Starting file upload processing for {FileCount} files", req.Form.Files.Count);
+            var uploadResult = await _dataUploadService.UploadFilesAsync(req.Form.Files, _agentThread);
+            var uploadResultList = uploadResult.ToList();
+            
+            _logger.LogInformation("Completed file upload processing. Success: {SuccessCount}, Total: {TotalCount}",
+                uploadResultList.Count(r => r.Status == UploadStatus.Completed),
+                uploadResultList.Count);
+            int successCount = uploadResultList.Count(r => r.Status == UploadStatus.Completed);
+            var successfulUploads = uploadResultList.Where(r => r.Status == UploadStatus.Completed)
+                                                    .Select(r => r.FileId)
+                                                    .ToList();
+
+
+            if (successfulUploads.Count() > 0)
             {
-                return new BadRequestObjectResult("Request must be multipart/form-data with a boundary.");
+                var createVectorStoreFileTasks = successfulUploads.Select(id => _dataUploadService.CreateVectorStoreFilesAync(id, vectorStoreResult.VectorStoreId)); ;
+                var createdStoreFiles = await Task.WhenAll(createVectorStoreFileTasks);
             }
 
-            _logger.LogInformation("@@@@@@@@@@ Boundry: {Boundry}", boundry);
-            var upd = _dataUploadService.ProcessMultipartReaderAsync(boundry, req.Body);
+            var updateAgent = await _dataUploadService.UpdateAgentAsync(_agentThread, vectorStoreResult);
+            _logger.LogInformation("AgentThread updated with Vector Store ID: {VectorStoreId}", vectorStoreResult.VectorStoreId);
 
-            return new OkObjectResult(upd);
+            return new OkResult( );
 
         }
         catch (Exception ex)

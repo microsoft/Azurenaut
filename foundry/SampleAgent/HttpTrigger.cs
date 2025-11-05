@@ -30,21 +30,21 @@ namespace SampleAgent
             // _logger.LogInformation("C# HTTP trigger function processed a request.");
             // //string msg = _agentService.Echo("Hello, world!");
 
-            // // parse http request with content type application/json with T<AgentThread>
-            // string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            // AgentThread requestAgentThread = JsonSerializer.Deserialize<AgentThread>(requestBody);
+            // parse http request with content type application/json with T<AgentThread>
+            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+            AgentThread requestAgentThread = JsonSerializer.Deserialize<AgentThread>(requestBody);
 
-            // // Get or create an Agent if the AgentId is valid, else a new agent is created and AngentId and ThreadId are returned
-            // var configureAssistant = await _agentService.ConfigureAssistantEnvironment(requestAgentThread.AgentId, requestAgentThread.ThreadId);
+            // Get or create an Agent if the AgentId is valid, else a new agent is created and AngentId and ThreadId are returned
+            var configureAssistant = await _agentService.ConfigureAssistantEnvironment(requestAgentThread.AgentId, requestAgentThread.ThreadId);
 
-            // return new OkObjectResult
-            // (
-            //     new ClientResponse
-            //     {
-            //         Response = configureAssistant.Response,
-            //         AgentThread = configureAssistant.AgentThread
-            //     }
-            // );
+            return new OkObjectResult
+            (
+                new ClientResponse
+                {
+                    Response = configureAssistant.Response,
+                    AgentThread = configureAssistant.AgentThread
+                }
+            );
 
 
             var formData = await req.ReadFormAsync();

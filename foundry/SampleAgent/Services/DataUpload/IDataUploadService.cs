@@ -36,4 +36,7 @@ public interface IDataUploadService
     Task<DataUploadResult> UploadFileFromStreamAsync(Stream stream, string fileName, string contentType, string? agentId = null);
 
     Task<string> ProcessMultipartReaderAsync(string boundry, Stream contentStream);
+    Task<VectorStoreResult> GetOrCreateVectorStoreAsync(AgentThread agentThread);
+    Task<StoreFile> CreateVectorStoreFilesAync(string fileId, string vectorStoreId);
+    Task<AgentThread> UpdateAgentAsync(AgentThread agentThread, VectorStoreResult storeResult);
 }

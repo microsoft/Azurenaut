@@ -224,3 +224,40 @@ public record FileUploadMetadata
     public string? ContentType { get; set; }
     public long FileSizeBytes { get; set; }
 }
+
+public enum StoreFileStatus
+{
+    in_progress,
+    complete,
+    cancelled,
+    failed
+}
+/// <summary>
+/// Represents a vectore store file attached to a vectore store
+/// </summary>
+public class StoreFile
+{
+    /// <summary>
+    /// Associated vectore store ID
+    /// </summary>
+    public string VectorStoreId { get; set; } = string.Empty;
+    /// <summary>
+    /// Associated file ID
+    /// </summary>
+    public string FileId { get; set; } = string.Empty;
+    /// <summary>
+    /// Timestamp when the vectore store file was created
+    /// </summary>
+    public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// Status of the vectore store file
+    /// </summary>
+    public string Status { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Last error message if any
+    /// </summary>
+    public string? LastErrorMessage { get; set; }
+
+}
