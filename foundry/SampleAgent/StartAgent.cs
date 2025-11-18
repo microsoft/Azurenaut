@@ -13,18 +13,18 @@ using Microsoft.VisualBasic;
 
 namespace SampleAgent
 {
-    public class HttpTrigger
+    public class StartAgent
     {
-        private readonly ILogger<HttpTrigger> _logger;
+        private readonly ILogger<StartAgent> _logger;
         private readonly IAgentService _agentService;
 
-        public HttpTrigger(ILogger<HttpTrigger> logger, IAgentService agentService)
+        public StartAgent(ILogger<StartAgent> logger, IAgentService agentService)
         {
             _logger = logger;
             _agentService = agentService;
         }
 
-        [Function("HttpTrigger")]
+        [Function("StartAgent")]
         public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "get", "post")] HttpRequest req)
         {
             // _logger.LogInformation("C# HTTP trigger function processed a request.");
@@ -45,13 +45,6 @@ namespace SampleAgent
                     AgentThread = configureAssistant.AgentThread
                 }
             );
-
-
-            var formData = await req.ReadFormAsync();
-
-            _logger.LogInformation("$$$$$$$$$---- file: {filePath}", formData.Files.First().FileName);
-
-            return new OkResult();
 
         }
 
