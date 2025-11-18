@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "SampleAgent": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7162",
+      "launchBrowser": false
+    }
+  }
+}
