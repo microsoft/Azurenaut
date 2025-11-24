@@ -1,7 +1,7 @@
-using Foundry;
+using Azurenaut.Services.Foundry;
 using Microsoft.AspNetCore.Http;
 
-namespace SampleAgent.Services.DataUpload;
+namespace Azurenaut.Services.DataUpload;
 
 /// <summary>
 /// Interface for file upload operations to Azure AI Foundry Agent service

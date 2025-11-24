@@ -7,10 +7,10 @@ using Microsoft.Net.Http.Headers;
 using System.Text.Json;
 using System.IO;
 
+using Azurenaut.Services.DataUpload;
+using Azurenaut.Services.Foundry;
 
-using Foundry;
-
-namespace SampleAgent.Services.DataUpload;
+namespace Azurenaut;
 
 public class DataUpload
 {

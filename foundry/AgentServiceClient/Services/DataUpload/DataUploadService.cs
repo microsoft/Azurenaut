@@ -11,12 +11,12 @@ using Azure.AI.Agents.Persistent;
 using Azure.Identity;
 using Azure;
 using System.Text.Json;
-using Foundry;
+using Azurenaut.Services.Foundry;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.FileProviders.Embedded;
 using System.Runtime.CompilerServices;
 
-namespace SampleAgent.Services.DataUpload;
+namespace Azurenaut.Services.DataUpload;
 
 public static class DataUploadServiceExtension
 {

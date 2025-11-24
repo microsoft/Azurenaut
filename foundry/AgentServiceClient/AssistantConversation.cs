@@ -3,10 +3,10 @@ using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
-using Foundry;
+using Azurenaut.Services.Foundry;
 
 
-namespace SampleAgent;
+namespace Azurenaut;
 
 public class AssistantConversation
 {

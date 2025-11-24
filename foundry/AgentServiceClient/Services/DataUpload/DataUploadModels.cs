@@ -1,4 +1,4 @@
-namespace SampleAgent.Services.DataUpload;
+namespace Azurenaut.Services.DataUpload;
 
 /// <summary>
 /// Represents the result of a file upload operation
