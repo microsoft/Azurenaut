@@ -28,7 +28,7 @@ public class DataUpload
     [Function("DataUpload")]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "get", "post")] HttpRequest req)
     {
-        _logger.LogInformation("File upload request received: {Method} {Path}", req.Method, req.Path);
+        _logger.LogInformation("File upload request received: {Method} {Path}", req.Method, req.Path.Replace("\r", "").Replace("\n", ""));
 
         try
         {
