@@ -25,6 +25,41 @@ public class DataUpload
         _dataUploadService = dataUploadService;
     }
 
+    /// <summary>
+    /// Handles file uploads for an AI assistant agent and integrates them into a vector store for RAG (Retrieval-Augmented Generation).
+    /// This Azure Function processes multipart/form-data requests containing files and agent thread information,
+    /// uploads the files to the assistant service, creates or retrieves a vector store, associates the files with the vector store,
+    /// and updates the agent configuration to enable file search capabilities.
+    /// </summary>
+    /// <param name="req">
+    /// HTTP request with the following behaviors:
+    /// - GET requests: Returns a health check response with service status and version
+    /// - POST requests: Expects multipart/form-data with:
+    ///   * Files: One or more files to upload (accessed via req.Form.Files)
+    ///   * agentThread: JSON string containing AgentThread object with AgentId and ThreadId
+    /// </param>
+    /// <returns>
+    /// Returns an IActionResult based on the request type and processing outcome:
+    /// 
+    /// For GET requests (Health Check):
+    /// {
+    ///   "Message": "Sample Upload service is running",
+    ///   "Timestamp": "2026-01-29T10:30:00Z",
+    ///   "Version": "1.0.0"
+    /// }
+    /// 
+    /// For successful POST requests:
+    /// HTTP 200 OK (empty body)
+    /// 
+    /// For failed requests:
+    /// - HTTP 400 Bad Request: Invalid HTTP method
+    /// - HTTP 500 Internal Server Error: Processing error with error details
+    /// 
+    /// Sample error response:
+    /// {
+    ///   "Error": "Failed to upload file: insufficient permissions"
+    /// }
+    /// </returns>
     [Function("DataUpload")]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "get", "post")] HttpRequest req)
     {

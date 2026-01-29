@@ -24,6 +24,30 @@ public class StartAgent
         _agentService = agentService;
     }
 
+    /// <summary>
+    /// Configures and initializes an AI assistant agent environment by creating or retrieving an existing agent and thread.
+    /// This Azure Function processes HTTP requests containing agent configuration details, establishes the assistant environment,
+    /// and returns the agent's response along with the agent thread information.
+    /// </summary>
+    /// <param name="req">
+    /// HTTP request containing a JSON payload with an AgentThread object. The request body should include:
+    /// - AgentId: Optional identifier for an existing agent (if null or invalid, a new agent is created)
+    /// - ThreadId: Optional identifier for an existing conversation thread (if null, a new thread is created)
+    /// </param>
+    /// <returns>
+    /// Returns an OkObjectResult with a ClientResponse object containing:
+    /// - Response: The assistant's response message
+    /// - AgentThread: Object with AgentId and ThreadId for maintaining conversation state
+    /// 
+    /// Sample return:
+    /// {
+    ///   "Response": "Hello! I'm your AI assistant. How can I help you today?",
+    ///   "AgentThread": {
+    ///     "AgentId": "asst_abc123xyz",
+    ///     "ThreadId": "thread_def456uvw"
+    ///   }
+    /// }
+    /// </returns>
     [Function("StartAgent")]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "get", "post")] HttpRequest req)
     {
