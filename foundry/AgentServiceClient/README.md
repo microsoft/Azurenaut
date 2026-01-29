@@ -5,6 +5,7 @@ This Azure Functions application provides a set of HTTP endpoints for managing A
 ## Table of Contents
 - [Base URL](#base-url)
 - [Authentication](#authentication)
+- [Configuration](#configuration)
 - [Endpoints](#endpoints)
   - [StartAgent](#1-startagent)
   - [AssistantConversation](#2-assistantconversation)
@@ -33,6 +34,65 @@ http://localhost:7071/api
 - **DataUpload**: Requires function-level authorization (function key)
 
 Function keys can be obtained from the Azure Portal or using Azure CLI.
+
+---
+
+## Configuration
+
+The application requires configuration settings to connect to Azure AI Foundry and manage agent operations. These settings should be defined in a `local.settings.json` file for local development.
+
+### local.settings.json
+
+Create a `local.settings.json` file in the project root with the following structure:
+
+```json
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "AIFoundry__Endpoint": "https://your-foundry-endpoint.cognitiveservices.azure.com/",
+    "AIFoundry__ApiKey": "your-api-key",
+    "AIFoundry__Model": "gpt-4",
+    "AIFoundry__Instructions": "You are a helpful assistant.",
+    "AIFoundry__AgentNamePrefix": "FileUploadAgent",
+    "AIFoundry__ThreadNamePrefix": "FileThread"
+  }
+}
+```
+
+### Configuration Settings
+
+| Setting | Description | Example Value |
+|---------|-------------|---------------|
+| `AzureWebJobsStorage` | Storage connection string for Azure Functions runtime. Use `UseDevelopmentStorage=true` for local development with Azurite. | `UseDevelopmentStorage=true` |
+| `FUNCTIONS_WORKER_RUNTIME` | Specifies the Functions runtime. Must be `dotnet-isolated` for this application. | `dotnet-isolated` |
+| `AIFoundry__Endpoint` | The endpoint URL for your Azure AI Foundry service. | `https://your-foundry-endpoint.cognitiveservices.azure.com/` |
+| `AIFoundry__ApiKey` | API key for authenticating with Azure AI Foundry. | `your-api-key` |
+| `AIFoundry__Model` | The AI model to use for agent conversations. | `gpt-4` |
+| `AIFoundry__Instructions` | Default system instructions for the AI agent. | `You are a helpful assistant.` |
+| `AIFoundry__AgentNamePrefix` | Prefix used when creating new agent names. | `FileUploadAgent` |
+| `AIFoundry__ThreadNamePrefix` | Prefix used when creating new thread names. | `FileThread` |
+
+### Azure Deployment
+
+For Azure deployments, configure these settings as Application Settings in your Function App:
+
+```bash
+# Using Azure CLI
+az functionapp config appsettings set \
+  --name <your-function-app-name> \
+  --resource-group <your-resource-group> \
+  --settings \
+    AIFoundry__Endpoint="https://your-foundry-endpoint.cognitiveservices.azure.com/" \
+    AIFoundry__ApiKey="your-api-key" \
+    AIFoundry__Model="gpt-4" \
+    AIFoundry__Instructions="You are a helpful assistant." \
+    AIFoundry__AgentNamePrefix="FileUploadAgent" \
+    AIFoundry__ThreadNamePrefix="FileThread"
+```
+
+**Note:** Never commit `local.settings.json` to version control as it contains sensitive information.
 
 ---
 
@@ -400,15 +460,35 @@ Error responses typically include an `Error` or `error` field with a descriptive
 
 ## Development
 
+### Prerequisites
+- .NET 8.0 SDK or later
+- Azure Functions Core Tools
+- Azure AI Foundry account and API key
+
+### Setup
+
+1. Clone the repository
+2. Create a `local.settings.json` file with your configuration (see [Configuration](#configuration) section)
+3. Install dependencies:
+   ```bash
+   dotnet restore
+   ```
+
+### Running Locally
+
 To run locally:
 ```bash
 func start
 ```
 
+### Deploying to Azure
+
 To deploy to Azure:
 ```bash
 func azure functionapp publish <your-function-app-name>
 ```
+
+Remember to configure Application Settings in Azure (see [Azure Deployment](#azure-deployment) in the Configuration section).
 
 ---
 
