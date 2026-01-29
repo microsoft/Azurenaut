@@ -25,6 +25,18 @@ public class DataUpload
         _dataUploadService = dataUploadService;
     }
 
+    /// <summary>
+    /// Handles file upload requests and processes them for vector store creation.
+    /// </summary>
+    /// <param name="req"></param>
+    /// <returns>HTTP response indicating the result of the upload operation.</returns>
+    /// <remarks>
+    /// Supports GET for health checks and POST for file uploads.
+    /// Expects multipart/form-data with files and an 'agentThread' field containing JSON serialized AgentThread object.
+    /// </remarks>
+    /// <todo>
+    /// - Improve OKOResult response to include detailed upload results.
+    /// </todo>
     [Function("DataUpload")]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "get", "post")] HttpRequest req)
     {

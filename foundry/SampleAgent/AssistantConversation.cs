@@ -19,6 +19,30 @@ public class AssistantConversation
         _agentService = agentService;
     }
 
+    /// <summary>
+    /// Azure Function to handle assistant conversation requests.
+    /// </summary>
+    /// <param name="req"></param>
+    /// <returns>
+    /// An IActionResult containing the conversation messages or an error message.
+    /// </returns>
+    /// <remarks>
+    /// Expects a JSON payload with the following structure:
+    /// {
+    ///     "ThreadId": "string",
+    ///     "AgentId": "string",
+    ///     "Message": "string"
+    /// }
+    /// Responds with a JSON payload containing the conversation messages.
+    /// {
+    ///    "Response": "string",
+    ///    "AgentThread": {
+    ///         "ThreadId": "string",
+    ///         "AgentId": "string",
+    ///         "RunId": "string",
+    ///         "Messages": [ ... ]
+    ///     }
+    /// }
     [Function("AssistantConversation")]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")] HttpRequest req)
     {
@@ -59,6 +83,14 @@ public class AssistantConversation
         );
     }
 
+    /// <summary>
+    /// Sends a message to the specified agent thread and starts a run.
+    /// </summary>
+    /// <param name="agentThread"></param>
+    /// <param name="messageContent"></param>
+    /// <returns>
+    /// A ClientResponse containing the response from the run and the updated AgentThread information.
+    /// </returns>
     private async Task<ClientResponse> SendThreadMessageAsync(AgentThread agentThread, string messageContent)
     {
         _logger.LogInformation("Sending message to thread {ThreadId}", agentThread.Message);
