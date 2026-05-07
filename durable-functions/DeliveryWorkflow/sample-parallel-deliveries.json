@@ -1,0 +1,34 @@
+{
+  "Deliveries": [
+    {
+      "OrderId": "PD101",
+      "CustomerName": "Charlie Brown",
+      "DeliveryAddress": "101 Maple Street",
+      "PizzaDescription": "Large Supreme Pizza"
+    },
+    {
+      "OrderId": "PD102",
+      "CustomerName": "Diana Prince",
+      "DeliveryAddress": "202 Oak Avenue",
+      "PizzaDescription": "Medium Hawaiian Pizza"
+    },
+    {
+      "OrderId": "PD103",
+      "CustomerName": "Ethan Hunt",
+      "DeliveryAddress": "303 Pine Boulevard",
+      "PizzaDescription": "Large Veggie Pizza"
+    },
+    {
+      "OrderId": "PD104",
+      "CustomerName": "Fiona Apple",
+      "DeliveryAddress": "404 Cedar Lane",
+      "PizzaDescription": "Medium Pepperoni Pizza"
+    },
+    {
+      "OrderId": "PD105",
+      "CustomerName": "George Lucas",
+      "DeliveryAddress": "505 Birch Court",
+      "PizzaDescription": "Large Margherita Pizza"
+    }
+  ]
+}

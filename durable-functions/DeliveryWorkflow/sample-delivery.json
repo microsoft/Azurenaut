@@ -1,0 +1,72 @@
+[
+  {
+    "orderId": "001",
+    "customerName": "John Doe",
+    "deliveryAddress": "123 Main St, Apt 5B",
+    "pizzaDescription": "Large Pepperoni Pizza",
+    "deliveryDurationMinutes": 3
+  },
+  {
+    "orderId": "002",
+    "customerName": "Sarah Johnson",
+    "deliveryAddress": "456 Oak Avenue, Unit 12",
+    "pizzaDescription": "Medium Margherita Pizza",
+    "deliveryDurationMinutes": 2
+  },
+  {
+    "orderId": "003",
+    "customerName": "Michael Chen",
+    "deliveryAddress": "789 Elm Street",
+    "pizzaDescription": "Large Supreme Pizza with extra cheese",
+    "deliveryDurationMinutes": 5
+  },
+  {
+    "orderId": "004",
+    "customerName": "Emily Rodriguez",
+    "deliveryAddress": "321 Pine Boulevard, Apt 3A",
+    "pizzaDescription": "Small Hawaiian Pizza",
+    "deliveryDurationMinutes": 1
+  },
+  {
+    "orderId": "005",
+    "customerName": "David Park",
+    "deliveryAddress": "654 Maple Drive",
+    "pizzaDescription": "Large Veggie Pizza",
+    "deliveryDurationMinutes": 4
+  },
+  {
+    "orderId": "006",
+    "customerName": "Jessica Martinez",
+    "deliveryAddress": "987 Cedar Lane, Suite 200",
+    "pizzaDescription": "Medium Pepperoni and Mushroom Pizza",
+    "deliveryDurationMinutes": 3
+  },
+  {
+    "orderId": "007",
+    "customerName": "Robert Williams",
+    "deliveryAddress": "147 Birch Court",
+    "pizzaDescription": "Large Meat Lovers Pizza",
+    "deliveryDurationMinutes": 2
+  },
+  {
+    "orderId": "008",
+    "customerName": "Amanda Thompson",
+    "deliveryAddress": "258 Willow Way, Apt 8C",
+    "pizzaDescription": "Medium BBQ Chicken Pizza",
+    "deliveryDurationMinutes": 5
+  },
+  {
+    "orderId": "009",
+    "customerName": "Christopher Lee",
+    "deliveryAddress": "369 Spruce Street",
+    "pizzaDescription": "Large Four Cheese Pizza",
+    "deliveryDurationMinutes": 4
+  },
+  {
+    "orderId": "010",
+    "customerName": "Lauren Davis",
+    "deliveryAddress": "741 Ash Avenue, Unit 6",
+    "pizzaDescription": "Small Margherita with Basil",
+    "deliveryDurationMinutes": 1
+  }
+]

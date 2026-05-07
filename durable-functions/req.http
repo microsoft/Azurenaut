@@ -1,0 +1,199 @@
+###################################################################
+# Durable Functions Orchestration Requests
+# Use this file with REST Client extension in VS Code
+# All Function Apps run on port 7071
+###################################################################
+
+@pizzaWorkflowUrl = http://localhost:7071
+@restaurantUrl = http://localhost:7071
+@deliveryUrl = http://localhost:7071
+
+###################################################################
+# 1. PIZZA WORKFLOW - Individual Pizza Making
+###################################################################
+
+### Make a Margherita Pizza (GET request)
+GET {{pizzaWorkflowUrl}}/api/PizzaMaking_HttpStart?type=Margherita
+
+### Make a Pepperoni Pizza (GET request)
+GET {{pizzaWorkflowUrl}}/api/PizzaMaking_HttpStart?type=Pepperoni
+
+### Make a Hawaiian Pizza (GET request)
+GET {{pizzaWorkflowUrl}}/api/PizzaMaking_HttpStart?type=Hawaiian
+
+### Make a Supreme Pizza (GET request)
+GET {{pizzaWorkflowUrl}}/api/PizzaMaking_HttpStart?type=Supreme
+
+### Make a Veggie Pizza (GET request)
+GET {{pizzaWorkflowUrl}}/api/PizzaMaking_HttpStart?type=Veggie
+
+### Make a Pizza (POST request)
+POST {{pizzaWorkflowUrl}}/api/PizzaMaking_HttpStart?type=Supreme
+Content-Type: application/json
+
+
+###################################################################
+# 1B. PARALLEL PIZZA MAKING - Make Multiple Pizzas with Max 5 Concurrent
+###################################################################
+
+### Make 3 Pizzas in Parallel
+POST {{pizzaWorkflowUrl}}/api/PizzaMakingParallel_HttpStart
+Content-Type: application/json
+
+{
+  "PizzaTypes": ["Margherita", "Pepperoni", "Hawaiian"]
+}
+
+### Make 8 Pizzas (processed in batches of 5)
+POST {{pizzaWorkflowUrl}}/api/PizzaMakingParallel_HttpStart
+Content-Type: application/json
+
+< ./PizzaWorkflow/sample-parallel-pizzas.json
+
+###################################################################
+# 2. RESTAURANT ORCHESTRATOR - Batch Orders with Delivery
+# Processes up to 3 orders concurrently
+###################################################################
+
+### Process a Small Batch of Orders (3 orders)
+POST {{restaurantUrl}}/api/Restaurant_HttpStart
+Content-Type: application/json
+
+{
+  "Orders": [
+    {
+      "OrderId": "R001",
+      "CustomerName": "Alice",
+      "PizzaType": "Margherita",
+      "DeliveryAddress": "123 Main St, Apt 5B",
+      "DelaySeconds": 5
+    },
+    {
+      "OrderId": "R002",
+      "CustomerName": "Bob",
+      "PizzaType": "Pepperoni",
+      "DeliveryAddress": "456 Oak Avenue",
+      "DelaySeconds": 15
+    },
+    {
+      "OrderId": "R003",
+      "CustomerName": "Carol",
+      "PizzaType": "Supreme",
+      "DeliveryAddress": "789 Elm Street",
+      "DelaySeconds": 25
+    }
+  ]
+}
+
+### Process Full Sample Order (14 orders - processed in batches: 3+3+3+3+2)
+POST {{restaurantUrl}}/api/Restaurant_HttpStart
+Content-Type: application/json
+
+< ./RestaurantOrchestrator/sample-order.json
+
+### Process Rush Order (no delays)
+POST {{restaurantUrl}}/api/Restaurant_HttpStart
+Content-Type: application/json
+
+{
+  "Orders": [
+    {
+      "OrderId": "EXP001",
+      "CustomerName": "Urgent Customer",
+      "PizzaType": "Pepperoni",
+      "DeliveryAddress": "999 Rush Street",
+      "DelaySeconds": 0
+    },
+    {
+      "OrderId": "EXP002",
+      "CustomerName": "Another Urgent Customer",
+      "PizzaType": "Margherita",
+      "DeliveryAddress": "888 Quick Avenue",
+      "DelaySeconds": 0
+    }
+  ]
+}
+
+###################################################################
+# 3. DELIVERY WORKFLOW - Individual Delivery
+###################################################################
+
+### Deliver a Single Order (Quick Delivery - 2 minutes)
+POST {{deliveryUrl}}/api/Delivery_HttpStart
+Content-Type: application/json
+
+{
+  "OrderId": "D001",
+  "CustomerName": "John Doe",
+  "DeliveryAddress": "123 Main St, Apt 5B",
+  "PizzaDescription": "Large Pepperoni Pizza with extra cheese",
+  "DeliveryDurationMinutes": 2
+}
+
+### Deliver with Random Duration (duration auto-assigned)
+POST {{deliveryUrl}}/api/Delivery_HttpStart
+Content-Type: application/json
+
+{
+  "OrderId": "D002",
+  "CustomerName": "Sarah Johnson",
+  "DeliveryAddress": "456 Oak Avenue, Unit 12",
+  "PizzaDescription": "Medium Margherita Pizza",
+  "DeliveryDurationMinutes": 0
+}
+
+### Deliver Far Away (5 minutes)
+POST {{deliveryUrl}}/api/Delivery_HttpStart
+Content-Type: application/json
+
+{
+  "OrderId": "D003",
+  "CustomerName": "Michael Chen",
+  "DeliveryAddress": "789 Elm Street (across town)",
+  "PizzaDescription": "Large Supreme Pizza with extra toppings",
+  "DeliveryDurationMinutes": 5
+}
+
+###################################################################
+# 3B. PARALLEL DELIVERY - Multiple Deliveries with Max 3 Concurrent
+# Each delivery takes a random 2-3 minutes
+###################################################################
+
+### Deliver 2 Orders in Parallel
+POST {{deliveryUrl}}/api/DeliveryParallel_HttpStart
+Content-Type: application/json
+
+{
+  "Deliveries": [
+    {
+      "OrderId": "PD001",
+      "CustomerName": "Alice Williams",
+      "DeliveryAddress": "111 First Avenue",
+      "PizzaDescription": "Large Pepperoni Pizza"
+    },
+    {
+      "OrderId": "PD002",
+      "CustomerName": "Bob Martinez",
+      "DeliveryAddress": "222 Second Street",
+      "PizzaDescription": "Medium Margherita Pizza"
+    }
+  ]
+}
+
+### Deliver 5 Orders (processed in batches: 3 + 2)
+POST {{deliveryUrl}}/api/DeliveryParallel_HttpStart
+Content-Type: application/json
+
+< ./DeliveryWorkflow/sample-parallel-deliveries.json
+
+###################################################################
+# MONITORING ENDPOINTS
+# After starting an orchestration, you'll get a response with URLs
+# Use the statusQueryGetUri, terminatePostUri, etc. from the response
+###################################################################
+
+### Example: Check orchestration status (replace {instanceId} with actual ID)
+# GET http://localhost:7072/runtime/webhooks/durabletask/instances/{instanceId}
+
+### Example: Terminate orchestration (replace {instanceId} with actual ID)
+# POST http://localhost:7072/runtime/webhooks/durabletask/instances/{instanceId}/terminate?reason=cancelled

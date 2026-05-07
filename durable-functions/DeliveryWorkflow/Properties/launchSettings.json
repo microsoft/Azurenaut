@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "DeliveryWorkflow": {
+      "commandName": "Project",
+      "commandLineArgs": "host start --port 7073",
+      "launchBrowser": false
+    }
+  }
+}

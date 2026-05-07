@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "RestaurantOrchestrator": {
+      "commandName": "Project",
+      "commandLineArgs": "host start --port 7072",
+      "launchBrowser": false
+    }
+  }
+}
