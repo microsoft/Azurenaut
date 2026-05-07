@@ -18,23 +18,23 @@ public static class RestaurantHttpTrigger
     {
         ILogger logger = executionContext.GetLogger("Restaurant_HttpStart");
 
-        // Parse the order batch from request body
-        RestaurantOrderBatch? orderBatch;
+        // Parse the order from request body
+        PizzaOrder? order;
         try
         {
             var requestBody = await req.ReadAsStringAsync();
-            orderBatch = JsonSerializer.Deserialize<RestaurantOrderBatch>(requestBody ?? "{}");
-            
-            if (orderBatch == null || orderBatch.Orders.Count == 0)
+            order = JsonSerializer.Deserialize<PizzaOrder>(requestBody ?? "{}");
+
+            if (order == null || string.IsNullOrWhiteSpace(order.OrderId) || order.PizzaTypes.Count == 0)
             {
                 var errorResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-                await errorResponse.WriteStringAsync("Invalid order batch. Please provide orders.");
+                await errorResponse.WriteStringAsync("Invalid order. Please provide an OrderId and at least one PizzaType.");
                 return errorResponse;
             }
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to parse order batch");
+            logger.LogError(ex, "Failed to parse order");
             var errorResponse = req.CreateResponse(HttpStatusCode.BadRequest);
             await errorResponse.WriteStringAsync($"Failed to parse order: {ex.Message}");
             return errorResponse;
@@ -42,11 +42,11 @@ public static class RestaurantHttpTrigger
 
         // Start the restaurant orchestration
         string instanceId = await client.ScheduleNewOrchestrationInstanceAsync(
-            "ProcessRestaurantOrders", 
-            orderBatch);
+            "ProcessRestaurantOrders",
+            order);
 
-        logger.LogInformation("Started restaurant orchestration with ID = '{instanceId}' for {count} orders.", 
-            instanceId, orderBatch.Orders.Count);
+        logger.LogInformation("Started restaurant orchestration with ID = '{instanceId}' for order {orderId} with {count} pizza(s).",
+            instanceId, order.OrderId, order.PizzaTypes.Count);
 
         // Returns an HTTP 202 response with an instance management payload
         return await client.CreateCheckStatusResponseAsync(req, instanceId);

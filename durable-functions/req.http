@@ -51,68 +51,37 @@ Content-Type: application/json
 < ./PizzaWorkflow/sample-parallel-pizzas.json
 
 ###################################################################
-# 2. RESTAURANT ORCHESTRATOR - Batch Orders with Delivery
-# Processes up to 3 orders concurrently
+# 2. RESTAURANT ORCHESTRATOR - Single Order with 1+ Pizzas
+# All pizzas in the order are made concurrently, then delivered together
 ###################################################################
 
-### Process a Small Batch of Orders (3 orders)
+### Process a Single Pizza Order
 POST {{restaurantUrl}}/api/Restaurant_HttpStart
 Content-Type: application/json
 
 {
-  "Orders": [
-    {
-      "OrderId": "R001",
-      "CustomerName": "Alice",
-      "PizzaType": "Margherita",
-      "DeliveryAddress": "123 Main St, Apt 5B",
-      "DelaySeconds": 5
-    },
-    {
-      "OrderId": "R002",
-      "CustomerName": "Bob",
-      "PizzaType": "Pepperoni",
-      "DeliveryAddress": "456 Oak Avenue",
-      "DelaySeconds": 15
-    },
-    {
-      "OrderId": "R003",
-      "CustomerName": "Carol",
-      "PizzaType": "Supreme",
-      "DeliveryAddress": "789 Elm Street",
-      "DelaySeconds": 25
-    }
-  ]
+  "OrderId": "R001",
+  "CustomerName": "Alice",
+  "DeliveryAddress": "123 Main St, Apt 5B",
+  "PizzaTypes": ["Margherita"]
 }
 
-### Process Full Sample Order (14 orders - processed in batches: 3+3+3+3+2)
+### Process an Order with Multiple Pizzas
+POST {{restaurantUrl}}/api/Restaurant_HttpStart
+Content-Type: application/json
+
+{
+  "OrderId": "R002",
+  "CustomerName": "Bob",
+  "DeliveryAddress": "456 Oak Avenue",
+  "PizzaTypes": ["Pepperoni", "Supreme", "Hawaiian"]
+}
+
+### Process Sample Order (from file)
 POST {{restaurantUrl}}/api/Restaurant_HttpStart
 Content-Type: application/json
 
 < ./RestaurantOrchestrator/sample-order.json
-
-### Process Rush Order (no delays)
-POST {{restaurantUrl}}/api/Restaurant_HttpStart
-Content-Type: application/json
-
-{
-  "Orders": [
-    {
-      "OrderId": "EXP001",
-      "CustomerName": "Urgent Customer",
-      "PizzaType": "Pepperoni",
-      "DeliveryAddress": "999 Rush Street",
-      "DelaySeconds": 0
-    },
-    {
-      "OrderId": "EXP002",
-      "CustomerName": "Another Urgent Customer",
-      "PizzaType": "Margherita",
-      "DeliveryAddress": "888 Quick Avenue",
-      "DelaySeconds": 0
-    }
-  ]
-}
 
 ###################################################################
 # 3. DELIVERY WORKFLOW - Individual Delivery
