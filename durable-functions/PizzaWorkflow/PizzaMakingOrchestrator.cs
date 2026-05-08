@@ -7,6 +7,7 @@ namespace Azurenaut.Orchestration.PizzaMaking;
 public class PizzaBatchRequest
 {
     public List<string> PizzaTypes { get; set; } = new();
+    public string? OrderNumber { get; set; }
 }
 
 public static class PizzaMakingOrchestrator

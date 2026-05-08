@@ -1,5 +1,6 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.DurableTask;
 using Microsoft.DurableTask.Client;
 using Microsoft.Extensions.Logging;
 using Azurenaut.Orchestration.PizzaMaking;
@@ -40,10 +41,15 @@ public static class ParallelPizzaMakingHttpTrigger
             return errorResponse;
         }
 
+        // Build a deterministic instance ID using the order number
+        var orderNumber = batchRequest.OrderNumber ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+        var instanceId = $"MakePizzasInParallel-{orderNumber}";
+
         // Start the parallel pizza making orchestration
-        string instanceId = await client.ScheduleNewOrchestrationInstanceAsync(
-            nameof(PizzaMakingOrchestrator.MakePizzasInParallel), 
-            batchRequest);
+        await client.ScheduleNewOrchestrationInstanceAsync(
+            nameof(PizzaMakingOrchestrator.MakePizzasInParallel),
+            batchRequest,
+            new StartOrchestrationOptions { InstanceId = instanceId });
 
         logger.LogInformation("Started parallel pizza making orchestration with ID = '{instanceId}' for {count} pizzas.", 
             instanceId, batchRequest.PizzaTypes.Count);
